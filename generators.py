@@ -1,6 +1,7 @@
-import os
+import os, io, sys
 import nbformat as nbf
 import mdutils
+import json
 
 
 def ktx_to_dict(input_file, keystarter='<'):
@@ -31,19 +32,80 @@ def dict_to_ktx(input_dict, output_file, keystarter='<'):
             f.write(f'{keystarter} {k}\n')
             f.write(f'{val}\n\n')
 
+def create_expected_ouputs():
+    expected_outputs = {}
+    for n in range(1, 101):
+        buffer = io.StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = buffer
+
+        try:
+            exec("import numpy as np\n" + QHA[f'a{n}'], globals())
+        except Exception as e:
+            expected_outputs[str(n)] = f"Error in a{n}: {e}"
+        else:
+            expected_outputs[str(n)] = buffer.getvalue().strip()
+        finally:
+            sys.stdout = old_stdout
+        
+    return expected_outputs
 
 HEADERS = ktx_to_dict(os.path.join('source', 'headers.ktx'))
 QHA = ktx_to_dict(os.path.join('source', 'exercises100.ktx'))
+expected_outputs = create_expected_ouputs()
+
+with open("expected_outputs.json", 'w') as f:
+    json.dump(expected_outputs, f, indent=4) 
 
 
-def create_jupyter_notebook(destination_filename='100_Numpy_exercises.ipynb', partial_answer=0):
+
+output_checker = """
+
+import io, sys
+import json
+from IPython.core.magic import register_cell_magic
+
+with open("expected_outputs.json", 'r') as f:
+    expected_outputs = json.load(f)
+@register_cell_magic
+def check_output(line, cell):
+    buffer = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buffer
+
+    try: 
+        exec(cell, globals())
+    finally:
+        sys.stdout = old_stdout
+
+    user_output = buffer.getvalue().strip()
+    expected_output = expected_outputs[line.strip()]
+
+    try:
+        assert user_output == expected_output
+        print(user_output)
+        print("✅ Great job!")
+    except AssertionError:
+        print("❌ Not quite right — try again ")
+        print("your output:")
+        print(user_output)
+        print("expected ouput: ")
+        print(expected_output)
+"""
+
+def create_jupyter_notebook(destination_filename='100_Numpy_exercises.ipynb', within_solved=0):
     """ Programmatically create jupyter notebook with the questions (and hints and solutions if required)
     saved under source files """
 
+    
     # Create cells sequence
     nb = nbf.v4.new_notebook()
-
+    
+    
     nb['cells'] = []
+
+    nb['cells'].append(nbf.v4.new_markdown_cell("# magic output checker: (ignore this cell)"))
+    nb['cells'].append(nbf.v4.new_code_cell(output_checker))
 
     # - Add header:
     nb['cells'].append(nbf.v4.new_markdown_cell(HEADERS["header"]))
@@ -56,12 +118,11 @@ def create_jupyter_notebook(destination_filename='100_Numpy_exercises.ipynb', pa
     # - Add questions and empty spaces for answers
     for n in range(1, 101):
         nb['cells'].append(nbf.v4.new_markdown_cell(f'#### {n}. ' + QHA[f'q{n}']))
-        
-        # Set up the first partial_answer answers
-        if n <= partial_answer:
-            nb['cells'].append(nbf.v4.new_code_cell(str(QHA[f'a{n}'])))
-        else:
-            nb['cells'].append(nbf.v4.new_code_cell())
+
+        # Set up the first within_solved answers
+        init_code = str(QHA[f'a{n}']) if n <= within_solved else "%%check_output " + str(n) + "\n"
+
+        nb['cells'].append(nbf.v4.new_code_cell(init_code))
             
     # Delete file if one with the same name is found
     if os.path.exists(destination_filename):
@@ -84,7 +145,7 @@ def create_jupyter_notebook_random_question(destination_filename='100_Numpy_rand
     nb['cells'].append(nbf.v4.new_markdown_cell(HEADERS["header"]))
     nb['cells'].append(nbf.v4.new_markdown_cell(HEADERS["sub_header"]))
     nb['cells'].append(nbf.v4.new_markdown_cell(HEADERS["jupyter_instruction_rand"]))
-
+    
     # - Add initialisation
     nb['cells'].append(nbf.v4.new_code_cell('%run initialise.py'))
     nb['cells'].append(nbf.v4.new_code_cell("pick()"))

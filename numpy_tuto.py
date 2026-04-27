@@ -90,7 +90,7 @@ r = a*b
 # Matrix Mulitplication
 m = np.matmul(a, b)
 # Find the Determinant
-d = np.linalg.det(a)
+#d = np.linalg.det(a)
 
 # Stastics
 np.min(np.array([1,2,3]))

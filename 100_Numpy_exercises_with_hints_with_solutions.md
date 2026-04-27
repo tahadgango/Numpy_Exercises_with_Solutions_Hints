@@ -19,7 +19,7 @@ File automatically generated. See the documentation to update questions/answers/
 import numpy as np
 ```
 #### 2. Print the numpy version and the configuration (★☆☆)
-`hint: np.__version__, np.show_config)`
+`hint: np.__version__, np.show_config`
 
 ```python
 print(np.__version__)
