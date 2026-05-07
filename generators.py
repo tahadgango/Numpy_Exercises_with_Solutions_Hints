@@ -4,7 +4,7 @@ import mdutils
 import json
 
 
-def ktx_to_dict(input_file, keystarter='<'):
+def ktx_to_dict(input_file: str, keystarter='<') -> dict:
     """ parsing keyed text to a python dictionary. """
     answer = dict()
 
@@ -25,14 +25,15 @@ def ktx_to_dict(input_file, keystarter='<'):
     return answer
 
 
-def dict_to_ktx(input_dict, output_file, keystarter='<'):
+def dict_to_ktx(input_dict: dict, output_file: str, keystarter='<') -> None:
     """ Store a python dictionary to a keyed text"""
     with open(output_file, 'w+') as f:
         for k, val in input_dict.items():
             f.write(f'{keystarter} {k}\n')
             f.write(f'{val}\n\n')
 
-def create_expected_ouputs():
+
+def create_expected_ouputs() -> dict:
     expected_outputs = {}
     for n in range(1, 101):
         buffer = io.StringIO()
@@ -49,6 +50,7 @@ def create_expected_ouputs():
             sys.stdout = old_stdout
         
     return expected_outputs
+
 
 HEADERS = ktx_to_dict(os.path.join('source', 'headers.ktx'))
 QHA = ktx_to_dict(os.path.join('source', 'exercises100.ktx'))
@@ -104,7 +106,8 @@ def create_jupyter_notebook(destination_filename='100_Numpy_exercises.ipynb', wi
     
     nb['cells'] = []
 
-    nb['cells'].append(nbf.v4.new_markdown_cell("# magic output checker: (ignore this cell)"))
+    # - Use Magic for check answers
+    nb['cells'].append(nbf.v4.new_markdown_cell("## Magic Output Checker (RUN IT!!)"))
     nb['cells'].append(nbf.v4.new_code_cell(output_checker))
 
     # - Add header:
